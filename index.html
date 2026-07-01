@@ -725,7 +725,11 @@ function showElevation() {
   }
 
   if (elevChart) elevChart.destroy();
-  elevChart = new Chart(document.getElementById('elevation-chart'), {
+  const canvas = document.getElementById('elevation-chart');
+  const wrap = canvas.parentElement;
+  canvas.width  = wrap.clientWidth  || 600;
+  canvas.height = 130;
+  elevChart = new Chart(canvas, {
     type: 'line',
     data: {
       labels,
@@ -745,7 +749,7 @@ function showElevation() {
         x: { ticks: { color: '#8b90a8', maxTicksLimit: 8 }, grid: { color: '#2e3248' } },
         y: { ticks: { color: '#8b90a8' }, grid: { color: '#2e3248' } }
       },
-      responsive: true,
+      responsive: false,
       maintainAspectRatio: false
     }
   });
