@@ -256,13 +256,24 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .aid-badge {
-      background: rgba(247,135,79,0.2);
-      color: var(--accent2);
-      border: 1px solid rgba(247,135,79,0.3);
-      font-size: 0.75rem;
-      padding: 1px 7px;
-      border-radius: 20px;
+    /* Form sections */
+    .form-section-title {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--accent); margin: 18px 0 10px;
+    }
+    .form-section-title:first-of-type { margin-top: 0; }
+    .form-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text2); font-size: 0.75rem; }
+    .form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checkbox-group { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+    .chk-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: var(--text); cursor: pointer;
+    }
+    .chk-label input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+    .strava-notice {
+      margin-top: 14px; padding: 10px 14px;
+      background: rgba(79,142,247,0.07); border: 1px solid rgba(79,142,247,0.2);
+      border-radius: 8px; font-size: 0.8rem; color: var(--text2); text-align: center;
     }
   </style>
 </head>
@@ -320,48 +331,119 @@
     <div class="card">
       <h2>🏃 내 정보 입력</h2>
 
-      <div class="form-group">
-        <label>경험 수준</label>
-        <select id="experience">
-          <option value="beginner">입문 (트레일 경험 1년 미만)</option>
-          <option value="intermediate" selected>중급 (트레일 1~3년)</option>
-          <option value="advanced">고급 (3년 이상, 50K+ 완주)</option>
-          <option value="elite">엘리트</option>
-        </select>
+      <!-- 기본 정보 -->
+      <div class="form-section-title">기본 정보</div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>경험 수준</label>
+          <select id="experience">
+            <option value="beginner">입문 (1년 미만)</option>
+            <option value="intermediate" selected>중급 (1~3년)</option>
+            <option value="advanced">고급 (50K+ 완주)</option>
+            <option value="elite">엘리트</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>성별</label>
+          <select id="gender">
+            <option value="male" selected>남성</option>
+            <option value="female">여성</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>체중 (kg)</label>
+          <input type="number" id="weight" placeholder="예: 68" min="30" max="150" />
+        </div>
+        <div class="form-group">
+          <label>나이</label>
+          <input type="number" id="age" placeholder="예: 32" min="10" max="80" />
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>주간 훈련량 (km)</label>
-        <input type="number" id="weekly-km" placeholder="예: 60" min="0" />
+      <!-- 훈련량 -->
+      <div class="form-section-title">훈련량</div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>주간 거리 (km)</label>
+          <input type="number" id="weekly-km" placeholder="예: 60" min="0" />
+        </div>
+        <div class="form-group">
+          <label>주간 획득고도 (m)</label>
+          <input type="number" id="weekly-elev" placeholder="예: 1500" min="0" />
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>최근 러닝 기록 (선택 — AI 추천 정확도 향상)</label>
-        <div class="records-grid">
-          <input type="text" id="rec-5k" placeholder="5K (예: 25:00)" />
-          <input type="text" id="rec-10k" placeholder="10K (예: 52:00)" />
-          <input type="text" id="rec-half" placeholder="하프 (예: 1:55:00)" />
-          <input type="text" id="rec-full" placeholder="마라톤 (예: 4:10:00)" />
+      <!-- 기록 -->
+      <div class="form-section-title">최근 기록 <span class="form-hint">— 정확할수록 페이스 추천 향상</span></div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>트레일 레이스 기록</label>
+          <input type="text" id="rec-trail" placeholder="예) 30K 3:45:00" />
+        </div>
+        <div class="form-group">
+          <label>마라톤 / 하프</label>
+          <input type="text" id="rec-full" placeholder="예) 마라톤 4:10:00" />
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>10K</label>
+          <input type="text" id="rec-10k" placeholder="예: 52:00" />
+        </div>
+        <div class="form-group">
+          <label>5K</label>
+          <input type="text" id="rec-5k" placeholder="예: 25:00" />
+        </div>
+      </div>
+
+      <!-- 장비 & 컨디션 -->
+      <div class="form-section-title">장비 & 컨디션</div>
+      <div class="form-row2">
+        <div class="form-group">
+          <label>폴 사용</label>
+          <select id="poles">
+            <option value="no" selected>사용 안 함</option>
+            <option value="yes">사용</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>더위 내성</label>
+          <select id="heat">
+            <option value="normal" selected>보통</option>
+            <option value="weak">더위에 약함</option>
+            <option value="strong">더위에 강함</option>
+          </select>
         </div>
       </div>
 
       <div class="form-group">
-        <label>목표 완주시간</label>
-        <div class="radio-group">
-          <div class="radio-btn active" id="btn-ai" onclick="setGoalMode('ai')">🤖 AI 추천</div>
-          <div class="radio-btn" id="btn-manual" onclick="setGoalMode('manual')">✏️ 직접 입력</div>
-        </div>
-        <div class="goal-input-wrap" id="goal-input-wrap">
-          <input type="text" id="goal-time" placeholder="예: 6:30:00" />
+        <label>약점 / 주의사항 <span class="form-hint">(해당하는 것 모두 선택)</span></label>
+        <div class="checkbox-group">
+          <label class="chk-label"><input type="checkbox" id="w-stomach"> 위장 문제 (구역, 식욕 부진)</label>
+          <label class="chk-label"><input type="checkbox" id="w-knee"> 무릎 통증 (특히 내리막)</label>
+          <label class="chk-label"><input type="checkbox" id="w-cramp"> 근육 경련</label>
+          <label class="chk-label"><input type="checkbox" id="w-lateblowup"> 후반 체력 저하</label>
+          <label class="chk-label"><input type="checkbox" id="w-altitude"> 고도 적응 미흡</label>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>특이사항 / 추가 요청 (선택)</label>
-        <input type="text" id="notes" placeholder="예: 더위에 약함, 후반 무릎 통증 있음" />
+      <!-- 목표 -->
+      <div class="form-section-title">목표 완주시간</div>
+      <div class="radio-group">
+        <div class="radio-btn active" id="btn-ai" onclick="setGoalMode('ai')">🤖 알고리즘 추천</div>
+        <div class="radio-btn" id="btn-manual" onclick="setGoalMode('manual')">✏️ 직접 입력</div>
+      </div>
+      <div class="goal-input-wrap" id="goal-input-wrap">
+        <input type="text" id="goal-time" placeholder="예: 6:30:00" />
       </div>
 
       <button class="btn-analyze" id="btn-analyze" onclick="analyze()">🔍 레이스 전략 생성</button>
+
+      <div class="strava-notice">
+        🔗 Strava · Garmin 연동은 추후 업데이트 예정입니다
+      </div>
     </div>
   </div>
 
@@ -659,15 +741,28 @@ function analyze() {
 
   setTimeout(() => {
     try {
-      const experience = document.getElementById('experience').value;
-      const weeklyKm  = parseFloat(document.getElementById('weekly-km').value) || 0;
-      const rec5k     = document.getElementById('rec-5k').value;
-      const rec10k    = document.getElementById('rec-10k').value;
-      const recHalf   = document.getElementById('rec-half').value;
-      const recFull   = document.getElementById('rec-full').value;
+      const experience  = document.getElementById('experience').value;
+      const gender      = document.getElementById('gender').value;
+      const weight      = parseFloat(document.getElementById('weight').value) || 65;
+      const age         = parseFloat(document.getElementById('age').value) || 30;
+      const weeklyKm    = parseFloat(document.getElementById('weekly-km').value) || 0;
+      const weeklyElev  = parseFloat(document.getElementById('weekly-elev').value) || 0;
+      const recTrail    = document.getElementById('rec-trail').value;
+      const rec5k       = document.getElementById('rec-5k').value;
+      const rec10k      = document.getElementById('rec-10k').value;
+      const recFull     = document.getElementById('rec-full').value;
+      const poles       = document.getElementById('poles').value === 'yes';
+      const heat        = document.getElementById('heat').value;
+      const weaknesses  = {
+        stomach:   document.getElementById('w-stomach').checked,
+        knee:      document.getElementById('w-knee').checked,
+        cramp:     document.getElementById('w-cramp').checked,
+        lateblowup:document.getElementById('w-lateblowup').checked,
+        altitude:  document.getElementById('w-altitude').checked,
+      };
       const goalInput = goalMode === 'manual' ? document.getElementById('goal-time').value : null;
 
-      const plan = calculateRacePlan({ experience, weeklyKm, rec5k, rec10k, recHalf, recFull, goalInput });
+      const plan = calculateRacePlan({ experience, gender, weight, age, weeklyKm, weeklyElev, recTrail, rec5k, rec10k, recFull, poles, heat, weaknesses, goalInput });
       renderResults(plan);
     } catch(err) {
       alert('계산 오류: ' + err.message);
@@ -716,21 +811,35 @@ function calcSegmentTime(seg, flatPace) {
 }
 
 // 기록 기반 평지 트레일 페이스 추정 (min/km)
-function estimateBasePace(experience, rec5k, rec10k, recHalf, recFull) {
-  // 경험 수준 기본값 (min/km)
+function estimateBasePace(experience, recTrail, rec5k, rec10k, recFull, weeklyElev, poles) {
   const defaults = { beginner:9.5, intermediate:7.2, advanced:5.8, elite:4.6 };
   let roadPacePerKm = null;
 
-  // 가장 긴 기록 우선 사용 (정확도↑)
-  const full  = parseTimeToMin(recFull);
-  const half  = parseTimeToMin(recHalf);
-  const k10   = parseTimeToMin(rec10k);
-  const k5    = parseTimeToMin(rec5k);
+  // 트레일 기록 있으면 최우선 사용 (포맷: "30K 3:45:00" or "3:45:00")
+  if (recTrail && recTrail.trim()) {
+    const parts = recTrail.trim().split(/\s+/);
+    let trailDist = null, trailTime = null;
+    for (const p of parts) {
+      const km = parseFloat(p.replace(/k/i,''));
+      if (!isNaN(km) && km > 5) { trailDist = km; continue; }
+      const t = parseTimeToMin(p);
+      if (t) trailTime = t;
+    }
+    if (trailDist && trailTime) {
+      // 트레일 기록 → 트레일 평지 페이스 직접 역산 (코스 난이도 보정 없이 사용)
+      return trailTime / trailDist;
+    }
+  }
 
-  if (full)  roadPacePerKm = full  / 42.195;
-  else if (half) roadPacePerKm = half  / 21.0975 * 1.08;
-  else if (k10)  roadPacePerKm = k10   / 10      * 1.15;
-  else if (k5)   roadPacePerKm = k5    / 5       * 1.25;
+  // 도로 기록으로 추정
+  const full = parseTimeToMin(recFull);
+  const k10  = parseTimeToMin(rec10k);
+  const k5   = parseTimeToMin(rec5k);
+
+  if (full && recFull.toLowerCase().includes('마라톤')) roadPacePerKm = full / 42.195;
+  else if (full) roadPacePerKm = full / 21.0975 * 1.08; // 하프
+  else if (k10)  roadPacePerKm = k10  / 10 * 1.15;
+  else if (k5)   roadPacePerKm = k5   / 5  * 1.25;
 
   // 트레일 보정계수 (도로 → 평지 트레일)
   const trailFactor = { beginner:1.55, intermediate:1.35, advanced:1.22, elite:1.10 };
@@ -795,62 +904,70 @@ function gelSchedule(fromKm, toKm, fromMin, toMin) {
 }
 
 // CP에서 섭취할 것 결정
-function cpItems(elapsedMin, nextCpMin, nextCpKm, curKm, segResults, isFirst, isLast) {
+function cpItems(elapsedMin, nextCpMin, nextCpKm, curKm, segResults, isFirst, isLast, { calPerHour = 700, heat = 'normal' } = {}) {
   const elapsedH   = elapsedMin / 60;
-  const nextLegMin = nextCpMin - elapsedMin; // 다음 CP까지 소요 예상 시간
+  const nextLegMin = Math.max(nextCpMin - elapsedMin, 0);
   const nextLegH   = nextLegMin / 60;
 
-  // 다음 구간 획득고도 합산
   const nextSegs = segResults.filter(s => s.startKm >= curKm && s.endKm <= nextCpKm);
   const nextGain = nextSegs.reduce((s, r) => s + r.gain, 0);
-  const nextLoss = nextSegs.reduce((s, r) => s + r.loss, 0);
 
+  // 더위에 따른 수분 계수
+  const waterRate = heat === 'weak' ? 750 : heat === 'strong' ? 550 : 650; // ml/h
   const items = [];
 
   if (isFirst) {
-    items.push({ icon:'💧', label:'수분', detail:`소프트플라스크 500ml×2 완충 (1,000ml)` });
-    items.push({ icon:'⚡', label:'전해질', detail:`소금 캡슐 1~2알 또는 전해질 정 복용` });
-    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${Math.ceil(nextLegH * 1.5 + 1)}개 휴대 (${Math.ceil(nextLegMin/35)}개는 구간 중 섭취)` });
-    items.push({ icon:'🥙', label:'고형식', detail:`소화 잘 되는 탄수화물 위주 (바나나, 떡, 에너지바)` });
+    const totalWater = heat === 'weak' ? 1000 : 750;
+    const gelCarry   = Math.ceil(nextLegH * 1.5 + 1);
+    items.push({ icon:'💧', label:'수분',     detail:`소프트플라스크 ${totalWater}ml 완충` });
+    items.push({ icon:'🧂', label:'전해질',   detail:`소금 캡슐 1~2알 또는 전해질 정 — 출발 30분 전 복용` });
+    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCarry}개 휴대, 35분 간격으로 섭취 예정` });
+    items.push({ icon:'🥙', label:'고형식',   detail:`출발 1시간 전: 탄수화물 위주 식사 (바나나, 떡, 에너지바)` });
     return items;
   }
 
   if (isLast) {
-    items.push({ icon:'🏁', label:'완주 후 즉시', detail:`단백질+탄수화물 (초코우유, 바나나, 리커버리바)` });
-    items.push({ icon:'💧', label:'수분', detail:`물 500ml 이상 천천히 보충` });
-    items.push({ icon:'🧂', label:'전해질', detail:`나트륨·칼륨 보충 (스포츠음료, 소금 국물)` });
+    items.push({ icon:'🏁', label:'완주 직후', detail:`단백질+탄수화물 (초코우유·바나나·리커버리바)` });
+    items.push({ icon:'💧', label:'수분',      detail:`물·스포츠음료 500ml 이상 천천히 보충` });
+    items.push({ icon:'🧂', label:'전해질',    detail:`나트륨·칼륨 보충 — 소금 국물, 스포츠음료` });
+    items.push({ icon:'🧊', label:'회복',      detail:`다리 아이싱 10분, 압박 스타킹 착용 권장` });
     return items;
   }
 
   // 수분
-  const waterNeed = Math.round(nextLegH * 600);
-  items.push({ icon:'💧', label:'수분 보충', detail:`물 ${waterNeed}ml 채우기 (다음 CP까지 ${nextLegMin.toFixed(0)}분 구간)` });
+  const waterNeed = Math.round(waterRate * nextLegH);
+  items.push({ icon:'💧', label:'수분 보충', detail:`${waterNeed}ml 채우기 (다음 CP까지 약 ${Math.round(nextLegMin)}분)` });
 
-  // 전해질 (1시간 이상 경과했거나 상승 많으면)
-  if (elapsedH > 1 || nextGain > 200) {
+  // 칼로리
+  const calNeed  = Math.round(calPerHour * nextLegH);
+  const gelCount = Math.max(1, Math.ceil(nextLegMin / 35));
+  const gelCal   = gelCount * 100;
+  const solidCal = Math.max(0, calNeed - gelCal);
+
+  items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCount}개 (${Math.round(nextLegMin/gelCount)}분 간격) — 약 ${gelCal}kcal` });
+
+  if (nextLegH >= 0.8 && solidCal > 0) {
+    items.push({ icon:'🍌', label:'고형식', detail:`바나나·에너지바·떡 등 약 ${solidCal}kcal — 위 상태 보며 섭취` });
+  }
+
+  // 전해질
+  if (elapsedH > 1 || nextGain > 200 || heat === 'weak') {
     items.push({ icon:'🧂', label:'전해질', detail:`소금 캡슐 1~2알 또는 전해질 음료 1컵` });
   }
 
-  // 에너지젤/고형식
-  const gelCount = Math.max(1, Math.ceil(nextLegMin / 35));
-  if (nextLegH >= 1) {
-    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCount}개 챙기기 (${Math.round(nextLegMin/gelCount)}분 간격 섭취)` });
-    items.push({ icon:'🍌', label:'고형식', detail:`바나나 1개 또는 에너지바 — 위가 거부하지 않으면 섭취` });
-  } else {
-    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCount}개 (구간이 짧으면 1개만)` });
-  }
-
-  // 다음 구간이 급오르막이면 추가 조언
-  const nextHardSeg = nextSegs.find(s => s.type && s.type.label.includes('오르'));
+  // 다음 구간 주의
   if (nextGain > 300) {
-    items.push({ icon:'⚠️', label:'주의', detail:`다음 구간 상승 ${Math.round(nextGain)}m — 출발 전 충분히 먹고 페이스 낮춰 진입` });
+    items.push({ icon:'⚠️', label:'주의', detail:`다음 구간 상승 ${Math.round(nextGain)}m — 페이스 낮추고 식사 후 충분히 소화 후 출발` });
+  }
+  if (heat === 'weak') {
+    items.push({ icon:'🌡️', label:'체온 관리', detail:`목·손목에 찬물 적시기, 그늘에서 휴식` });
   }
 
   return items;
 }
 
 // 보급 계획 생성
-function generateSupplyPlan(segResults, totalMin, gpxData) {
+function generateSupplyPlan(segResults, totalMin, gpxData, { weight = 65, heat = 'normal', calPerHour = 700 } = {}) {
   const supply = [];
 
   // CP 목록 구성 (GPX 웨이포인트 or 8~10km 간격 자동 생성)
@@ -871,7 +988,7 @@ function generateSupplyPlan(segResults, totalMin, gpxData) {
     km: '출발',
     name: '출발선',
     elapsed: '0:00:00',
-    items: cpItems(0, firstCpMin, firstCpKm, 0, segResults, true, false),
+    items: cpItems(0, firstCpMin, firstCpKm, 0, segResults, true, false, { calPerHour, heat }),
     gels: []
   });
 
@@ -893,7 +1010,7 @@ function generateSupplyPlan(segResults, totalMin, gpxData) {
       km: `${cp.km.toFixed(1)}km`,
       name: cp.name,
       elapsed: formatTime(elMin),
-      items: cpItems(elMin, nextMin, nextKm, cp.km, segResults, false, false),
+      items: cpItems(elMin, nextMin, nextKm, cp.km, segResults, false, false, { calPerHour, heat }),
       gels
     });
   });
@@ -909,7 +1026,7 @@ function generateSupplyPlan(segResults, totalMin, gpxData) {
     km: `${gpxData.totalDist.toFixed(1)}km`,
     name: '피니시',
     elapsed: formatTime(totalMin),
-    items: cpItems(totalMin, totalMin, gpxData.totalDist, gpxData.totalDist, segResults, false, true),
+    items: cpItems(totalMin, totalMin, gpxData.totalDist, gpxData.totalDist, segResults, false, true, { calPerHour, heat }),
     gels: finGels
   });
 
@@ -917,60 +1034,76 @@ function generateSupplyPlan(segResults, totalMin, gpxData) {
 }
 
 // 레이스 전략 텍스트 생성
-function generateStrategy(segResults, totalMin, gpxData, experience) {
+function generateStrategy(segResults, totalMin, gpxData, { experience, poles, heat, weaknesses, weight, age }) {
   const dist = gpxData.totalDist.toFixed(1);
   const gain = Math.round(gpxData.elevGain);
 
-  // 가장 힘든 구간 (페이스 느린 순)
-  const hardest = [...segResults].sort((a,b) => b.pace - a.pace)[0];
-  const hardestKm = `${hardest.startKm.toFixed(1)}~${hardest.endKm.toFixed(1)}km`;
+  const hardest    = [...segResults].sort((a,b) => b.pace - a.pace)[0];
+  const hardestKm  = `${hardest.startKm.toFixed(1)}~${hardest.endKm.toFixed(1)}km`;
+  const half       = gpxData.totalDist / 2;
+  const firstTime  = segResults.filter(s => s.startKm < half).reduce((s,r)=>s+r.segTime,0);
+  const secondTime = segResults.filter(s => s.startKm >= half).reduce((s,r)=>s+r.segTime,0);
 
-  // 전반/후반 비율
-  const half = gpxData.totalDist / 2;
-  const firstHalf = segResults.filter(s => s.startKm < half);
-  const secondHalf = segResults.filter(s => s.startKm >= half);
-  const firstTime = firstHalf.reduce((s,r)=>s+r.segTime,0);
-  const secondTime = secondHalf.reduce((s,r)=>s+r.segTime,0);
-  const negSplitTip = secondTime > firstTime * 1.1
-    ? '후반 구간이 전반보다 어렵습니다. 전반 30%를 의도적으로 아끼세요.'
-    : '전후반 균형이 비교적 고른 코스입니다.';
+  const splitTip = secondTime > firstTime * 1.1
+    ? '후반부가 전반보다 어렵습니다. 전반 30%를 의도적으로 아끼세요.'
+    : '전후반 균형이 고른 코스입니다. 초반 흥분을 주의하세요.';
 
   const expTip = {
-    beginner:     '입문자는 완주 자체가 목표입니다. 걷기-뛰기 병행을 두려워하지 마세요.',
-    intermediate: '오르막에서 빠른 하이킹 파워워크를 활용하면 에너지를 30% 아낄 수 있습니다.',
-    advanced:     '고도 구간에서 케이던스(보폭 수)를 유지하며 속도만 줄이는 전략이 효과적입니다.',
-    elite:        '초반 5km 페이스가 전체 레이스 결과를 결정합니다. 목표 페이스의 95%로 시작하세요.'
+    beginner:     '완주가 목표입니다. 오르막은 무조건 걷고, 뛰고 싶어도 30분에 한 번은 걷는 구간을 넣으세요.',
+    intermediate: '파워워크(빠른 걷기+폴 푸시)로 오르막을 공략하면 에너지를 30% 아낄 수 있습니다.',
+    advanced:     '오르막에서 케이던스(보폭 수)를 분당 170 이상 유지하며 속도만 줄이는 전략이 효과적입니다.',
+    elite:        '목표 페이스의 95%로 시작하고, 초반 5km에서 심박을 확인하며 페이스를 고정하세요.'
   }[experience] || '';
+
+  // 약점별 조언
+  const weakTips = [];
+  if (weaknesses.stomach)    weakTips.push('• 위장 문제: 젤 대신 고형식 우선, 진한 농도의 식품 피하기. 30분마다 소량씩 섭취.');
+  if (weaknesses.knee)       weakTips.push('• 무릎: 내리막에서 보폭을 평소의 70%로 줄이고 착지를 발볼로. 스틱 사용 적극 권장.');
+  if (weaknesses.cramp)      weakTips.push('• 근육 경련: 전해질(소금 캡슐)을 45분마다 복용. 경련 전조(경련감) 느끼면 즉시 워킹 전환.');
+  if (weaknesses.lateblowup) weakTips.push('• 후반 체력 저하: 레이스 전반 60%를 "너무 쉽다" 싶게 달리세요. 50% 지점까지 절제가 완주를 결정합니다.');
+  if (weaknesses.altitude)   weakTips.push('• 고도 적응: 고도 400m 이상 구간 진입 시 페이스를 10~15% 낮추고 호흡을 의식적으로 깊게 가져가세요.');
+
+  const poleTip = poles
+    ? '• 폴: 오르막 진입 시 팔꿈치 각도 90도 유지, 폴을 발 앞 20~30cm에 짚어 추진력 극대화. 내리막 급경사에서 브레이킹 지지대로 활용.'
+    : '';
+
+  const heatTip = heat === 'weak'
+    ? '• 더위 주의: 수분 섭취 간격을 15분으로 줄이세요. 보급소에서 목과 손목에 찬물 적시기. 구역감 오면 페이스 즉시 낮추기.'
+    : heat === 'strong' ? '' : '';
+
+  const weakSection = [...weakTips, poleTip, heatTip].filter(Boolean).join('\n');
 
   return `📌 코스 개요
 총 ${dist}km · 누적 상승 ${gain}m · 예상 완주 ${formatTime(totalMin)}
 
-🏁 전략 포인트
-${negSplitTip}
-가장 힘든 구간은 ${hardestKm} (경사 ${hardest.gradePct.toFixed(1)}%)입니다. 이 구간 진입 전 보급과 페이스 조절이 핵심입니다.
+🏁 레이스 전략
+${splitTip}
+가장 힘든 구간은 ${hardestKm}입니다. 이 구간 직전 보급소에서 충분히 먹고 페이스를 낮춰 진입하세요.
 
-⚡ 페이스 전략
-• 초반 5km: 목표 페이스보다 10~15초/km 느리게 출발하세요.
-• 오르막: 심박이 높아지면 즉시 파워워크로 전환. 걷는 것이 전략입니다.
-• 내리막: 무릎 보호를 위해 보폭을 짧게 유지하고 착지 충격을 분산하세요.
-• 후반 20%: 에너지가 남아있으면 페이스업. 남은 거리를 믿고 밀어붙이세요.
-
-🥤 보급 전략
-젤/에너지바는 배고프기 전에 섭취하세요 (30~40분 간격). 물은 목이 마르기 전에 조금씩 자주 마시고, 보급소 도착 직전에 남은 물을 비워 무게를 줄이세요.
+⚡ 페이스 운영
+• 출발 후 5km: 목표 페이스보다 10~15초/km 느리게. 초반 흥분 금물.
+• 오르막: 심박 상승 느끼면 즉시 파워워크 전환 — 걷는 것이 전략입니다.
+• 내리막: 보폭 짧게, 발볼 착지, 무릎 약간 굽혀 충격 분산.
+• 후반 20%: 에너지 남으면 페이스업. 남은 거리를 믿고 밀어붙이세요.
 
 💪 경험별 조언
-${expTip}`;
+${expTip}
+${weakSection ? '\n⚠️ 개인 약점 대응\n' + weakSection : ''}`;
 }
 
 // ─── 메인 계산 함수 ──────────────────────────────────────────
-function calculateRacePlan({ experience, weeklyKm, rec5k, rec10k, recHalf, recFull, goalInput }) {
-  const basePace = estimateBasePace(experience, rec5k, rec10k, recHalf, recFull);
+function calculateRacePlan({ experience, gender, weight, age, weeklyKm, weeklyElev, recTrail, rec5k, rec10k, recFull, poles, heat, weaknesses, goalInput }) {
+  // 폴 사용 시 오르막 페이스 보정 (약 8% 향상)
+  const poleFactor = poles ? 0.92 : 1.0;
+  const basePace = estimateBasePace(experience, recTrail, rec5k, rec10k, recFull, weeklyElev, poles);
 
-  // 구간별 ITRA 공식 기반 시간 계산 (gain/loss 실사용)
+  // 구간별 ITRA 공식 + 폴 보정 적용
   let segResults = gpxData.segments.map((seg, i) => {
-    const segTime = calcSegmentTime(seg, basePace);
-    const pace    = segTime / seg.length;      // 표시 페이스 (GPS 워치 기준)
     const type    = segType(seg);
+    // 폴 사용 시 오르막 구간만 보정
+    const poleAdj = (poles && type.badge === 'badge-up') ? poleFactor : 1.0;
+    const segTime = calcSegmentTime(seg, basePace) * poleAdj;
+    const pace    = segTime / seg.length;
     return { ...seg, pace, segTime, type, idx: i + 1 };
   });
 
@@ -992,16 +1125,18 @@ function calculateRacePlan({ experience, weeklyKm, rec5k, rec10k, recHalf, recFu
     return { ...r, cumTime: cumMin, cumKm };
   });
 
-  const supply   = generateSupplyPlan(segResults, totalMin, gpxData);
-  const strategy = generateStrategy(segResults, totalMin, gpxData, experience);
+  // 체중 기반 시간당 칼로리 (METs 기반, 트레일러닝 MET ≈ 11)
+  const calPerHour = Math.round(weight * 11 * 1.05);
+
+  const supply   = generateSupplyPlan(segResults, totalMin, gpxData, { weight, heat, calPerHour });
+  const strategy = generateStrategy(segResults, totalMin, gpxData, { experience, poles, heat, weaknesses, weight, age });
   const difficulty = getDifficulty(gpxData);
 
-  // 예상 순위 (경험 + 거리 기반 러프 추정)
   const rankMap = { beginner:'하위 30%', intermediate:'중위권', advanced:'상위 30%', elite:'상위 10%' };
 
   return {
     goalTime: formatTime(totalMin),
-    summary: { time: formatTime(totalMin), rank: rankMap[experience] || '-', difficulty },
+    summary: { time: formatTime(totalMin), rank: rankMap[experience] || '-', difficulty, calTotal: Math.round(calPerHour * totalMin / 60) },
     segResults,
     supply,
     strategy
@@ -1013,8 +1148,8 @@ function renderResults(plan) {
   // 상단 요약
   document.getElementById('result-stats').innerHTML = `
     <div class="result-stat"><div class="val">${plan.summary.time}</div><div class="lbl">예상 완주시간</div></div>
-    <div class="result-stat"><div class="val">${plan.summary.rank}</div><div class="lbl">예상 순위권</div></div>
     <div class="result-stat"><div class="val">${plan.summary.difficulty}</div><div class="lbl">코스 난이도</div></div>
+    <div class="result-stat"><div class="val">${plan.summary.calTotal.toLocaleString()}kcal</div><div class="lbl">예상 소모 칼로리</div></div>
     <div class="result-stat"><div class="val">${gpxData.waypoints.length}개</div><div class="lbl">보급소</div></div>
   `;
 
