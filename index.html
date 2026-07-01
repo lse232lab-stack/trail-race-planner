@@ -825,9 +825,16 @@ function estimateBasePace(experience, recTrail, rec5k, rec10k, recFull, weeklyEl
       const t = parseTimeToMin(p);
       if (t) trailTime = t;
     }
-    if (trailDist && trailTime) {
-      // 트레일 기록 → 트레일 평지 페이스 직접 역산 (코스 난이도 보정 없이 사용)
-      return trailTime / trailDist;
+    if (trailTime && gpxData) {
+      // 트레일 기록 → ITRA effort km으로 역산해서 진짜 평지 페이스 추출
+      // (기록에 이미 고도 페널티 포함되어 있으므로 단순 거리 나눗셈 금지)
+      const totalEffortKm = gpxData.segments.reduce((sum, seg) => {
+        const eff = seg.length + seg.gain / 100 - seg.loss / 200;
+        return sum + Math.max(eff, seg.length * 0.75);
+      }, 0);
+      if (totalEffortKm > 0) return trailTime / totalEffortKm;
+      // gpxData 없거나 effort 계산 실패 시 단순 거리로 폴백
+      if (trailDist) return trailTime / trailDist;
     }
   }
 
