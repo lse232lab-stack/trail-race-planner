@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trail Race Planner</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #252836;
+      --border: #2e3248;
+      --accent: #4f8ef7;
+      --accent2: #f7874f;
+      --green: #4fcf8e;
+      --text: #e8eaf0;
+      --text2: #8b90a8;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header span { font-size: 1.6rem; }
+    .subtitle { color: var(--text2); font-size: 0.85rem; margin-top: 2px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* API Key */
+    .api-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .api-bar label { color: var(--text2); font-size: 0.85rem; white-space: nowrap; }
+    .api-bar input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.875rem;
+      font-family: monospace;
+    }
+    .api-bar input:focus { outline: none; border-color: var(--accent); }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    @media (max-width: 768px) {
+      .grid2 { grid-template-columns: 1fr; }
+      .container { padding: 16px 12px; }
+      header { padding: 16px; }
+      header h1 { font-size: 1.2rem; }
+      .card { padding: 16px; }
+      .records-grid { grid-template-columns: 1fr 1fr; }
+      .result-grid { grid-template-columns: 1fr 1fr; }
+      .pace-table { font-size: 0.78rem; }
+      .pace-table th, .pace-table td { padding: 7px 8px; }
+      #map { height: 220px; }
+      .section-card { padding: 16px; }
+      .supply-label { min-width: 55px; }
+      .cp-header { flex-wrap: wrap; }
+      .btn-analyze { font-size: 0.95rem; padding: 13px; }
+    }
+    @media (max-width: 400px) {
+      .result-grid { grid-template-columns: 1fr 1fr; }
+      .records-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(79,142,247,0.05); }
+    .upload-zone .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .upload-zone p { color: var(--text2); font-size: 0.9rem; }
+    .upload-zone strong { color: var(--accent); }
+    #gpx-input { display: none; }
+
+    .gpx-summary {
+      display: none;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .stat-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+    }
+    .stat-chip .val { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .stat-chip .lbl { color: var(--text2); font-size: 0.75rem; }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text2); margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .form-group select option { background: var(--surface2); }
+
+    .radio-group { display: flex; gap: 8px; margin-top: 6px; }
+    .radio-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+      background: var(--surface2);
+    }
+    .radio-btn.active { border-color: var(--accent); background: rgba(79,142,247,0.12); color: var(--accent); }
+
+    .goal-input-wrap { margin-top: 12px; display: none; }
+
+    .records-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Analyze button */
+    .btn-analyze {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn-analyze:hover { opacity: 0.85; }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Map */
+    #map { height: 320px; border-radius: 10px; overflow: hidden; margin-bottom: 20px; display: none; }
+    #elevation-chart-wrap { display: none; margin-bottom: 20px; }
+
+    /* Results */
+    #results { display: none; margin-top: 28px; }
+    #results h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; }
+
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .result-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .result-stat .val { font-size: 1.6rem; font-weight: 700; color: var(--green); }
+    .result-stat .lbl { color: var(--text2); font-size: 0.8rem; margin-top: 4px; }
+
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .section-card h3 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+    .pace-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .pace-table th { text-align: left; padding: 8px 12px; color: var(--text2); border-bottom: 1px solid var(--border); font-weight: 500; }
+    .pace-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .pace-table tr:last-child td { border-bottom: none; }
+    .pace-table .highlight { color: var(--accent); font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge-up { background: rgba(247,135,79,0.15); color: var(--accent2); }
+    .badge-down { background: rgba(79,207,142,0.15); color: var(--green); }
+    .badge-flat { background: rgba(79,142,247,0.12); color: var(--accent); }
+
+    .supply-list { list-style: none; }
+    .supply-list li {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+    }
+    .supply-list li:last-child { border-bottom: none; }
+    .supply-list .km { color: var(--accent); font-weight: 700; min-width: 48px; }
+    .supply-list .desc { color: var(--text); }
+    .supply-list .note { color: var(--text2); font-size: 0.8rem; margin-top: 2px; }
+
+    .strategy-text { font-size: 0.9rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+
+    /* 보급 계획 */
+    .cp-block { padding: 14px 0; border-bottom: 1px solid var(--border); list-style: none; }
+    .cp-block:last-child { border-bottom: none; }
+    .cp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .cp-name { font-weight: 600; font-size: 0.95rem; flex: 1; }
+    .cp-time { color: var(--text2); font-size: 0.8rem; }
+    .gel-row { font-size: 0.8rem; color: var(--text2); margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    .gel-chip { background: rgba(79,142,247,0.12); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 1px 8px; color: var(--accent); font-size: 0.75rem; }
+    .supply-items { display: flex; flex-direction: column; gap: 5px; }
+    .supply-item { display: flex; align-items: baseline; gap: 8px; font-size: 0.85rem; }
+    .supply-icon { font-size: 1rem; min-width: 20px; }
+    .supply-label { color: var(--text2); min-width: 70px; font-size: 0.8rem; }
+    .supply-detail { color: var(--text); }
+
+    /* Loading */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+      color: var(--text2);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .aid-badge {
+      background: rgba(247,135,79,0.2);
+      color: var(--accent2);
+      border: 1px solid rgba(247,135,79,0.3);
+      font-size: 0.75rem;
+      padding: 1px 7px;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <span>🏔️</span>
+  <div>
+    <h1>Trail Race Planner</h1>
+    <div class="subtitle">GPX 파일 하나로 완성하는 나만의 레이스 전략</div>
+  </div>
+</header>
+
+<div class="container">
+
+
+  <div class="grid2">
+    <!-- LEFT: GPX + Map -->
+    <div>
+      <div class="card" style="margin-bottom:20px">
+        <h2>📂 GPX 파일</h2>
+        <div class="upload-zone" id="upload-zone">
+          <div class="icon">🗺️</div>
+          <p><strong>클릭하거나 파일을 드래그</strong>하세요</p>
+          <p style="margin-top:6px">.gpx 파일 지원</p>
+        </div>
+        <input type="file" id="gpx-input" accept=".gpx" />
+        <div class="gpx-summary" id="gpx-summary">
+          <div class="stat-chip">
+            <div class="val" id="s-dist">-</div>
+            <div class="lbl">총 거리</div>
+          </div>
+          <div class="stat-chip">
+            <div class="val" id="s-elev">-</div>
+            <div class="lbl">누적 상승</div>
+          </div>
+          <div class="stat-chip">
+            <div class="val" id="s-drop">-</div>
+            <div class="lbl">누적 하강</div>
+          </div>
+          <div class="stat-chip">
+            <div class="val" id="s-aids">-</div>
+            <div class="lbl">보급소</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="map"></div>
+      <div id="elevation-chart-wrap" class="card">
+        <h2>📈 고도 프로파일</h2>
+        <canvas id="elevation-chart" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- RIGHT: Form -->
+    <div class="card">
+      <h2>🏃 내 정보 입력</h2>
+
+      <div class="form-group">
+        <label>경험 수준</label>
+        <select id="experience">
+          <option value="beginner">입문 (트레일 경험 1년 미만)</option>
+          <option value="intermediate" selected>중급 (트레일 1~3년)</option>
+          <option value="advanced">고급 (3년 이상, 50K+ 완주)</option>
+          <option value="elite">엘리트</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>주간 훈련량 (km)</label>
+        <input type="number" id="weekly-km" placeholder="예: 60" min="0" />
+      </div>
+
+      <div class="form-group">
+        <label>최근 러닝 기록 (선택 — AI 추천 정확도 향상)</label>
+        <div class="records-grid">
+          <input type="text" id="rec-5k" placeholder="5K (예: 25:00)" />
+          <input type="text" id="rec-10k" placeholder="10K (예: 52:00)" />
+          <input type="text" id="rec-half" placeholder="하프 (예: 1:55:00)" />
+          <input type="text" id="rec-full" placeholder="마라톤 (예: 4:10:00)" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>목표 완주시간</label>
+        <div class="radio-group">
+          <div class="radio-btn active" id="btn-ai" onclick="setGoalMode('ai')">🤖 AI 추천</div>
+          <div class="radio-btn" id="btn-manual" onclick="setGoalMode('manual')">✏️ 직접 입력</div>
+        </div>
+        <div class="goal-input-wrap" id="goal-input-wrap">
+          <input type="text" id="goal-time" placeholder="예: 6:30:00" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>특이사항 / 추가 요청 (선택)</label>
+        <input type="text" id="notes" placeholder="예: 더위에 약함, 후반 무릎 통증 있음" />
+      </div>
+
+      <button class="btn-analyze" id="btn-analyze" onclick="analyze()">🔍 레이스 전략 생성</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>레이스 전략을 계산 중입니다...</p>
+    <p style="font-size:0.8rem;margin-top:8px">GAP · Naismith 알고리즘으로 구간별 페이스를 분석하고 있어요</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <h2>📋 레이스 플랜</h2>
+
+    <div class="result-grid" id="result-stats"></div>
+
+    <div class="section-card">
+      <h3>🗺️ 구간별 페이스 계획</h3>
+      <div style="overflow-x:auto">
+        <table class="pace-table" id="pace-table">
+          <thead>
+            <tr>
+              <th>구간</th>
+              <th>거리</th>
+              <th>↑상승 / ↓하강</th>
+              <th>성격</th>
+              <th>목표 페이스</th>
+              <th>구간 시간</th>
+              <th>누적 시간</th>
+            </tr>
+          </thead>
+          <tbody id="pace-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h3>🥤 보급 전략</h3>
+      <ul class="supply-list" id="supply-list"></ul>
+    </div>
+
+    <div class="section-card">
+      <h3>🧠 레이스 전략</h3>
+      <div class="strategy-text" id="strategy-text"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+let gpxData = null;
+let goalMode = 'ai';
+let map = null;
+let elevChart = null;
+
+// ─── Goal mode toggle ─────────────────────────────────────
+function setGoalMode(mode) {
+  goalMode = mode;
+  document.getElementById('btn-ai').classList.toggle('active', mode === 'ai');
+  document.getElementById('btn-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('goal-input-wrap').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+// ─── Upload zone ──────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+const gpxInput = document.getElementById('gpx-input');
+
+uploadZone.addEventListener('click', () => gpxInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processGPX(file);
+});
+gpxInput.addEventListener('change', e => { if (e.target.files[0]) processGPX(e.target.files[0]); });
+
+// ─── GPX Parsing ──────────────────────────────────────────
+function processGPX(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      gpxData = parseGPX(e.target.result);
+      showGPXSummary();
+      showMap();
+      showElevation();
+    } catch(err) {
+      alert('GPX 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseGPX(xml) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'application/xml');
+
+  // Track points (trkpt) 또는 Route points (rtept) 모두 지원
+  const trkpts = doc.querySelectorAll('trkpt').length > 0
+    ? doc.querySelectorAll('trkpt')
+    : doc.querySelectorAll('rtept');
+  const points = Array.from(trkpts).map(pt => ({
+    lat: parseFloat(pt.getAttribute('lat')),
+    lon: parseFloat(pt.getAttribute('lon')),
+    ele: parseFloat(pt.querySelector('ele')?.textContent || 0),
+    time: pt.querySelector('time')?.textContent || null
+  }));
+
+  // Waypoints (aid stations)
+  const wpts = doc.querySelectorAll('wpt');
+  const waypoints = Array.from(wpts).map(wpt => ({
+    lat: parseFloat(wpt.getAttribute('lat')),
+    lon: parseFloat(wpt.getAttribute('lon')),
+    ele: parseFloat(wpt.querySelector('ele')?.textContent || 0),
+    name: wpt.querySelector('name')?.textContent || '보급소',
+    desc: wpt.querySelector('desc')?.textContent || ''
+  }));
+
+  if (points.length < 2) throw new Error('트랙 포인트가 부족합니다.');
+
+  // Distance calc
+  let totalDist = 0;
+  let elevGain = 0, elevLoss = 0;
+  const distArr = [0];
+
+  for (let i = 1; i < points.length; i++) {
+    const d = haversine(points[i-1], points[i]);
+    totalDist += d;
+    distArr.push(totalDist);
+    const dEle = points[i].ele - points[i-1].ele;
+    if (dEle > 0) elevGain += dEle;
+    else elevLoss += Math.abs(dEle);
+  }
+
+  // Associate waypoints with closest km along route
+  const waypointsWithKm = waypoints.map(wpt => {
+    let minDist = Infinity, bestIdx = 0;
+    for (let i = 0; i < points.length; i++) {
+      const d = haversine(wpt, points[i]);
+      if (d < minDist) { minDist = d; bestIdx = i; }
+    }
+    return { ...wpt, km: distArr[bestIdx] };
+  }).sort((a, b) => a.km - b.km);
+
+  // Build segments (~5km or by waypoints)
+  const segments = buildSegments(points, distArr, waypointsWithKm, totalDist);
+
+  return {
+    points, distArr, totalDist, elevGain, elevLoss,
+    waypoints: waypointsWithKm, segments
+  };
+}
+
+function haversine(a, b) {
+  const R = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(s)) / 1000; // km
+}
+
+function buildSegments(points, distArr, waypoints, totalDist) {
+  // Create split points: every ~5km + waypoints
+  const splits = new Set([0]);
+  for (let km = 5; km < totalDist; km += 5) splits.add(Math.round(km * 10) / 10);
+  waypoints.forEach(w => splits.add(Math.round(w.km * 10) / 10));
+  splits.add(Math.round(totalDist * 10) / 10);
+
+  const sortedSplits = Array.from(splits).sort((a, b) => a - b);
+  const segments = [];
+
+  for (let i = 0; i < sortedSplits.length - 1; i++) {
+    const startKm = sortedSplits[i];
+    const endKm = sortedSplits[i + 1];
+    if (endKm - startKm < 0.5) continue;
+
+    // Find indices
+    const startIdx = distArr.findIndex(d => d >= startKm);
+    const endIdx = distArr.findIndex(d => d >= endKm);
+    const si = Math.max(0, startIdx);
+    const ei = Math.min(points.length - 1, endIdx === -1 ? points.length - 1 : endIdx);
+
+    let gain = 0, loss = 0;
+    for (let j = si + 1; j <= ei; j++) {
+      const dEle = points[j].ele - points[j-1].ele;
+      if (dEle > 0) gain += dEle;
+      else loss += Math.abs(dEle);
+    }
+
+    const length = endKm - startKm;
+    const gradePct = length > 0 ? ((points[ei].ele - points[si].ele) / (length * 1000)) * 100 : 0;
+    const aidStation = waypoints.find(w => w.km > startKm && w.km <= endKm);
+
+    segments.push({
+      startKm, endKm, length,
+      startEle: points[si].ele, endEle: points[ei].ele,
+      gain, loss, gradePct,
+      aidStation: aidStation || null
+    });
+  }
+  return segments;
+}
+
+// ─── UI Updates ───────────────────────────────────────────
+function showGPXSummary() {
+  const d = gpxData;
+  document.getElementById('s-dist').textContent = d.totalDist.toFixed(1) + ' km';
+  document.getElementById('s-elev').textContent = Math.round(d.elevGain) + ' m';
+  document.getElementById('s-drop').textContent = Math.round(d.elevLoss) + ' m';
+  document.getElementById('s-aids').textContent = d.waypoints.length + '개';
+  const sum = document.getElementById('gpx-summary');
+  sum.style.display = 'flex';
+}
+
+function showMap() {
+  const mapEl = document.getElementById('map');
+  mapEl.style.display = 'block';
+
+  if (!map) {
+    map = L.map('map');
+    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenTopoMap'
+    }).addTo(map);
+  } else {
+    map.eachLayer(l => { if (!(l instanceof L.TileLayer)) map.removeLayer(l); });
+  }
+
+  const latlngs = gpxData.points.map(p => [p.lat, p.lon]);
+  const poly = L.polyline(latlngs, { color: '#4f8ef7', weight: 3 }).addTo(map);
+  map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+
+  // Start/finish
+  L.circleMarker(latlngs[0], { radius: 8, color: '#4fcf8e', fillColor: '#4fcf8e', fillOpacity: 1 })
+    .bindPopup('출발').addTo(map);
+  L.circleMarker(latlngs[latlngs.length - 1], { radius: 8, color: '#f7874f', fillColor: '#f7874f', fillOpacity: 1 })
+    .bindPopup('도착').addTo(map);
+
+  // Waypoints
+  gpxData.waypoints.forEach(w => {
+    L.circleMarker([w.lat, w.lon], { radius: 6, color: '#f7e54f', fillColor: '#f7e54f', fillOpacity: 0.9 })
+      .bindPopup(`⛽ ${w.name}<br>${w.km.toFixed(1)} km`)
+      .addTo(map);
+  });
+}
+
+function showElevation() {
+  const wrap = document.getElementById('elevation-chart-wrap');
+  wrap.style.display = 'block';
+
+  // Downsample to ~300 points for chart
+  const pts = gpxData.points;
+  const step = Math.max(1, Math.floor(pts.length / 300));
+  const labels = [], data = [];
+  for (let i = 0; i < pts.length; i += step) {
+    labels.push(gpxData.distArr[i].toFixed(1));
+    data.push(pts[i].ele.toFixed(0));
+  }
+
+  if (elevChart) elevChart.destroy();
+  elevChart = new Chart(document.getElementById('elevation-chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: '#4f8ef7',
+        backgroundColor: 'rgba(79,142,247,0.1)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b90a8', maxTicksLimit: 8 }, grid: { color: '#2e3248' } },
+        y: { ticks: { color: '#8b90a8' }, grid: { color: '#2e3248' } }
+      },
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// ─── Analyze (순수 알고리즘) ─────────────────────────────────
+function analyze() {
+  if (!gpxData) return alert('GPX 파일을 먼저 업로드해주세요.');
+
+  document.getElementById('btn-analyze').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+
+  setTimeout(() => {
+    try {
+      const experience = document.getElementById('experience').value;
+      const weeklyKm  = parseFloat(document.getElementById('weekly-km').value) || 0;
+      const rec5k     = document.getElementById('rec-5k').value;
+      const rec10k    = document.getElementById('rec-10k').value;
+      const recHalf   = document.getElementById('rec-half').value;
+      const recFull   = document.getElementById('rec-full').value;
+      const goalInput = goalMode === 'manual' ? document.getElementById('goal-time').value : null;
+
+      const plan = calculateRacePlan({ experience, weeklyKm, rec5k, rec10k, recHalf, recFull, goalInput });
+      renderResults(plan);
+    } catch(err) {
+      alert('계산 오류: ' + err.message);
+    } finally {
+      document.getElementById('btn-analyze').disabled = false;
+      document.getElementById('loading').style.display = 'none';
+    }
+  }, 300);
+}
+
+// ─── 알고리즘 핵심 ────────────────────────────────────────────
+
+// 시간 문자열 → 분 변환 (MM:SS 또는 HH:MM:SS)
+function parseTimeToMin(str) {
+  if (!str || !str.trim()) return null;
+  const parts = str.trim().split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 2) return parts[0] + parts[1] / 60;
+  if (parts.length === 3) return parts[0] * 60 + parts[1] + parts[2] / 60;
+  return null;
+}
+
+// 분 → HH:MM:SS
+function formatTime(min) {
+  const h = Math.floor(min / 60);
+  const m = Math.floor(min % 60);
+  const s = Math.round((min - Math.floor(min)) * 60);
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// 분 → MM:SS (페이스용)
+function formatPace(minPerKm) {
+  const m = Math.floor(minPerKm);
+  const s = Math.round((minPerKm - m) * 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ITRA 공식 기반 구간 시간 계산
+// 100m 상승 = 1km 추가 노력, 100m 하강 = 0.5km 감소
+function calcSegmentTime(seg, flatPace) {
+  const gainEquiv  = seg.gain / 100;         // 상승 환산 km
+  const lossEquiv  = seg.loss / 200;         // 하강 환산 km (절반만 돌려줌)
+  const effortKm   = seg.length + gainEquiv - lossEquiv;
+  const safeEffort = Math.max(effortKm, seg.length * 0.75);
+  return flatPace * safeEffort;              // 분
+}
+
+// 기록 기반 평지 트레일 페이스 추정 (min/km)
+function estimateBasePace(experience, rec5k, rec10k, recHalf, recFull) {
+  // 경험 수준 기본값 (min/km)
+  const defaults = { beginner:9.5, intermediate:7.2, advanced:5.8, elite:4.6 };
+  let roadPacePerKm = null;
+
+  // 가장 긴 기록 우선 사용 (정확도↑)
+  const full  = parseTimeToMin(recFull);
+  const half  = parseTimeToMin(recHalf);
+  const k10   = parseTimeToMin(rec10k);
+  const k5    = parseTimeToMin(rec5k);
+
+  if (full)  roadPacePerKm = full  / 42.195;
+  else if (half) roadPacePerKm = half  / 21.0975 * 1.08;
+  else if (k10)  roadPacePerKm = k10   / 10      * 1.15;
+  else if (k5)   roadPacePerKm = k5    / 5       * 1.25;
+
+  // 트레일 보정계수 (도로 → 평지 트레일)
+  const trailFactor = { beginner:1.55, intermediate:1.35, advanced:1.22, elite:1.10 };
+  const factor = trailFactor[experience] || 1.35;
+
+  if (roadPacePerKm) return roadPacePerKm * factor;
+  return defaults[experience] || 7.2;
+}
+
+// 구간 성격 분류 — gain/loss 비율 기준 (순 고도차 X)
+function segType(seg) {
+  const gainRate = seg.gain / seg.length;   // m/km
+  const lossRate = seg.loss / seg.length;   // m/km
+  const bothHigh = gainRate > 60 && lossRate > 60;
+  if (bothHigh) return { label:'업다운', badge:'badge-flat' };
+  if (gainRate > lossRate * 1.4) {
+    return gainRate > 100
+      ? { label:'급오르막', badge:'badge-up' }
+      : { label:'오르막',   badge:'badge-up' };
+  }
+  if (lossRate > gainRate * 1.4) {
+    return lossRate > 100
+      ? { label:'급내리막', badge:'badge-down' }
+      : { label:'내리막',   badge:'badge-down' };
+  }
+  return { label:'평지', badge:'badge-flat' };
+}
+
+// 난이도 평가
+function getDifficulty(d) {
+  const itra = (d.totalDist * 1.5 + d.elevGain / 100).toFixed(0);
+  if (itra < 200) return '초급';
+  if (itra < 350) return '중급';
+  if (itra < 500) return '중상급';
+  if (itra < 700) return '상급';
+  return '최상급';
+}
+
+// km 지점의 누적 경과시간(분) 계산
+function elapsedAtKm(km, segResults, totalMin, totalDist) {
+  for (const s of segResults) {
+    if (s.cumKm >= km) {
+      const ratio = (km - (s.cumKm - s.length)) / s.length;
+      return (s.cumTime - s.segTime) + ratio * s.segTime;
+    }
+  }
+  return totalMin;
+}
+
+// 다음 CP까지 구간에 있어야 할 에너지젤 섭취 계획 생성
+function gelSchedule(fromKm, toKm, fromMin, toMin) {
+  const GEL_INTERVAL_MIN = 35; // 젤 섭취 간격 (분)
+  const gels = [];
+  let t = fromMin + GEL_INTERVAL_MIN;
+  while (t < toMin - 10) {
+    const progress = (t - fromMin) / (toMin - fromMin);
+    const km = fromKm + progress * (toKm - fromKm);
+    gels.push({ km: km.toFixed(1), time: formatTime(t) });
+    t += GEL_INTERVAL_MIN;
+  }
+  return gels;
+}
+
+// CP에서 섭취할 것 결정
+function cpItems(elapsedMin, nextCpMin, nextCpKm, curKm, segResults, isFirst, isLast) {
+  const elapsedH   = elapsedMin / 60;
+  const nextLegMin = nextCpMin - elapsedMin; // 다음 CP까지 소요 예상 시간
+  const nextLegH   = nextLegMin / 60;
+
+  // 다음 구간 획득고도 합산
+  const nextSegs = segResults.filter(s => s.startKm >= curKm && s.endKm <= nextCpKm);
+  const nextGain = nextSegs.reduce((s, r) => s + r.gain, 0);
+  const nextLoss = nextSegs.reduce((s, r) => s + r.loss, 0);
+
+  const items = [];
+
+  if (isFirst) {
+    items.push({ icon:'💧', label:'수분', detail:`소프트플라스크 500ml×2 완충 (1,000ml)` });
+    items.push({ icon:'⚡', label:'전해질', detail:`소금 캡슐 1~2알 또는 전해질 정 복용` });
+    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${Math.ceil(nextLegH * 1.5 + 1)}개 휴대 (${Math.ceil(nextLegMin/35)}개는 구간 중 섭취)` });
+    items.push({ icon:'🥙', label:'고형식', detail:`소화 잘 되는 탄수화물 위주 (바나나, 떡, 에너지바)` });
+    return items;
+  }
+
+  if (isLast) {
+    items.push({ icon:'🏁', label:'완주 후 즉시', detail:`단백질+탄수화물 (초코우유, 바나나, 리커버리바)` });
+    items.push({ icon:'💧', label:'수분', detail:`물 500ml 이상 천천히 보충` });
+    items.push({ icon:'🧂', label:'전해질', detail:`나트륨·칼륨 보충 (스포츠음료, 소금 국물)` });
+    return items;
+  }
+
+  // 수분
+  const waterNeed = Math.round(nextLegH * 600);
+  items.push({ icon:'💧', label:'수분 보충', detail:`물 ${waterNeed}ml 채우기 (다음 CP까지 ${nextLegMin.toFixed(0)}분 구간)` });
+
+  // 전해질 (1시간 이상 경과했거나 상승 많으면)
+  if (elapsedH > 1 || nextGain > 200) {
+    items.push({ icon:'🧂', label:'전해질', detail:`소금 캡슐 1~2알 또는 전해질 음료 1컵` });
+  }
+
+  // 에너지젤/고형식
+  const gelCount = Math.max(1, Math.ceil(nextLegMin / 35));
+  if (nextLegH >= 1) {
+    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCount}개 챙기기 (${Math.round(nextLegMin/gelCount)}분 간격 섭취)` });
+    items.push({ icon:'🍌', label:'고형식', detail:`바나나 1개 또는 에너지바 — 위가 거부하지 않으면 섭취` });
+  } else {
+    items.push({ icon:'🍬', label:'에너지젤', detail:`젤 ${gelCount}개 (구간이 짧으면 1개만)` });
+  }
+
+  // 다음 구간이 급오르막이면 추가 조언
+  const nextHardSeg = nextSegs.find(s => s.type && s.type.label.includes('오르'));
+  if (nextGain > 300) {
+    items.push({ icon:'⚠️', label:'주의', detail:`다음 구간 상승 ${Math.round(nextGain)}m — 출발 전 충분히 먹고 페이스 낮춰 진입` });
+  }
+
+  return items;
+}
+
+// 보급 계획 생성
+function generateSupplyPlan(segResults, totalMin, gpxData) {
+  const supply = [];
+
+  // CP 목록 구성 (GPX 웨이포인트 or 8~10km 간격 자동 생성)
+  let cpPoints = [];
+  if (gpxData.waypoints.length > 0) {
+    cpPoints = gpxData.waypoints.map(w => ({ km: w.km, name: w.name }));
+  } else {
+    const interval = gpxData.totalDist <= 25 ? 8 : 10;
+    for (let km = interval; km < gpxData.totalDist - 2; km += interval) {
+      cpPoints.push({ km: parseFloat(km.toFixed(1)), name: `CP ${Math.round(km)}km` });
+    }
+  }
+
+  // 출발선
+  const firstCpKm  = cpPoints.length > 0 ? cpPoints[0].km : gpxData.totalDist;
+  const firstCpMin = elapsedAtKm(firstCpKm, segResults, totalMin, gpxData.totalDist);
+  supply.push({
+    km: '출발',
+    name: '출발선',
+    elapsed: '0:00:00',
+    items: cpItems(0, firstCpMin, firstCpKm, 0, segResults, true, false),
+    gels: []
+  });
+
+  // 각 CP
+  cpPoints.forEach((cp, idx) => {
+    const elMin   = elapsedAtKm(cp.km, segResults, totalMin, gpxData.totalDist);
+    const nextCp  = cpPoints[idx + 1];
+    const nextKm  = nextCp ? nextCp.km : gpxData.totalDist;
+    const nextMin = nextCp ? elapsedAtKm(nextKm, segResults, totalMin, gpxData.totalDist) : totalMin;
+
+    // 이전 CP
+    const prevKm  = idx === 0 ? 0 : cpPoints[idx - 1].km;
+    const prevMin = idx === 0 ? 0 : elapsedAtKm(prevKm, segResults, totalMin, gpxData.totalDist);
+
+    // 구간 중 젤 섭취 시점 (이전 CP → 이 CP 사이)
+    const gels = gelSchedule(prevKm, cp.km, prevMin, elMin);
+
+    supply.push({
+      km: `${cp.km.toFixed(1)}km`,
+      name: cp.name,
+      elapsed: formatTime(elMin),
+      items: cpItems(elMin, nextMin, nextKm, cp.km, segResults, false, false),
+      gels
+    });
+  });
+
+  // 마지막 CP → 피니시 구간 젤
+  const lastCp   = cpPoints[cpPoints.length - 1];
+  const lastKm   = lastCp ? lastCp.km : 0;
+  const lastMin  = lastCp ? elapsedAtKm(lastKm, segResults, totalMin, gpxData.totalDist) : 0;
+  const finGels  = gelSchedule(lastKm, gpxData.totalDist, lastMin, totalMin);
+
+  // 피니시
+  supply.push({
+    km: `${gpxData.totalDist.toFixed(1)}km`,
+    name: '피니시',
+    elapsed: formatTime(totalMin),
+    items: cpItems(totalMin, totalMin, gpxData.totalDist, gpxData.totalDist, segResults, false, true),
+    gels: finGels
+  });
+
+  return supply;
+}
+
+// 레이스 전략 텍스트 생성
+function generateStrategy(segResults, totalMin, gpxData, experience) {
+  const dist = gpxData.totalDist.toFixed(1);
+  const gain = Math.round(gpxData.elevGain);
+
+  // 가장 힘든 구간 (페이스 느린 순)
+  const hardest = [...segResults].sort((a,b) => b.pace - a.pace)[0];
+  const hardestKm = `${hardest.startKm.toFixed(1)}~${hardest.endKm.toFixed(1)}km`;
+
+  // 전반/후반 비율
+  const half = gpxData.totalDist / 2;
+  const firstHalf = segResults.filter(s => s.startKm < half);
+  const secondHalf = segResults.filter(s => s.startKm >= half);
+  const firstTime = firstHalf.reduce((s,r)=>s+r.segTime,0);
+  const secondTime = secondHalf.reduce((s,r)=>s+r.segTime,0);
+  const negSplitTip = secondTime > firstTime * 1.1
+    ? '후반 구간이 전반보다 어렵습니다. 전반 30%를 의도적으로 아끼세요.'
+    : '전후반 균형이 비교적 고른 코스입니다.';
+
+  const expTip = {
+    beginner:     '입문자는 완주 자체가 목표입니다. 걷기-뛰기 병행을 두려워하지 마세요.',
+    intermediate: '오르막에서 빠른 하이킹 파워워크를 활용하면 에너지를 30% 아낄 수 있습니다.',
+    advanced:     '고도 구간에서 케이던스(보폭 수)를 유지하며 속도만 줄이는 전략이 효과적입니다.',
+    elite:        '초반 5km 페이스가 전체 레이스 결과를 결정합니다. 목표 페이스의 95%로 시작하세요.'
+  }[experience] || '';
+
+  return `📌 코스 개요
+총 ${dist}km · 누적 상승 ${gain}m · 예상 완주 ${formatTime(totalMin)}
+
+🏁 전략 포인트
+${negSplitTip}
+가장 힘든 구간은 ${hardestKm} (경사 ${hardest.gradePct.toFixed(1)}%)입니다. 이 구간 진입 전 보급과 페이스 조절이 핵심입니다.
+
+⚡ 페이스 전략
+• 초반 5km: 목표 페이스보다 10~15초/km 느리게 출발하세요.
+• 오르막: 심박이 높아지면 즉시 파워워크로 전환. 걷는 것이 전략입니다.
+• 내리막: 무릎 보호를 위해 보폭을 짧게 유지하고 착지 충격을 분산하세요.
+• 후반 20%: 에너지가 남아있으면 페이스업. 남은 거리를 믿고 밀어붙이세요.
+
+🥤 보급 전략
+젤/에너지바는 배고프기 전에 섭취하세요 (30~40분 간격). 물은 목이 마르기 전에 조금씩 자주 마시고, 보급소 도착 직전에 남은 물을 비워 무게를 줄이세요.
+
+💪 경험별 조언
+${expTip}`;
+}
+
+// ─── 메인 계산 함수 ──────────────────────────────────────────
+function calculateRacePlan({ experience, weeklyKm, rec5k, rec10k, recHalf, recFull, goalInput }) {
+  const basePace = estimateBasePace(experience, rec5k, rec10k, recHalf, recFull);
+
+  // 구간별 ITRA 공식 기반 시간 계산 (gain/loss 실사용)
+  let segResults = gpxData.segments.map((seg, i) => {
+    const segTime = calcSegmentTime(seg, basePace);
+    const pace    = segTime / seg.length;      // 표시 페이스 (GPS 워치 기준)
+    const type    = segType(seg);
+    return { ...seg, pace, segTime, type, idx: i + 1 };
+  });
+
+  let totalMin = segResults.reduce((s, r) => s + r.segTime, 0);
+
+  // 수동 목표시간 입력 시 전체 스케일 조정
+  const goalMin = parseTimeToMin(goalInput);
+  if (goalMin && goalMin > 0) {
+    const scale = goalMin / totalMin;
+    segResults = segResults.map(r => ({ ...r, pace: r.pace * scale, segTime: r.segTime * scale }));
+    totalMin = goalMin;
+  }
+
+  // 누적 시간 & km 추가
+  let cumMin = 0, cumKm = 0;
+  segResults = segResults.map(r => {
+    cumMin += r.segTime;
+    cumKm  += r.length;
+    return { ...r, cumTime: cumMin, cumKm };
+  });
+
+  const supply   = generateSupplyPlan(segResults, totalMin, gpxData);
+  const strategy = generateStrategy(segResults, totalMin, gpxData, experience);
+  const difficulty = getDifficulty(gpxData);
+
+  // 예상 순위 (경험 + 거리 기반 러프 추정)
+  const rankMap = { beginner:'하위 30%', intermediate:'중위권', advanced:'상위 30%', elite:'상위 10%' };
+
+  return {
+    goalTime: formatTime(totalMin),
+    summary: { time: formatTime(totalMin), rank: rankMap[experience] || '-', difficulty },
+    segResults,
+    supply,
+    strategy
+  };
+}
+
+// ─── 결과 렌더링 ─────────────────────────────────────────────
+function renderResults(plan) {
+  // 상단 요약
+  document.getElementById('result-stats').innerHTML = `
+    <div class="result-stat"><div class="val">${plan.summary.time}</div><div class="lbl">예상 완주시간</div></div>
+    <div class="result-stat"><div class="val">${plan.summary.rank}</div><div class="lbl">예상 순위권</div></div>
+    <div class="result-stat"><div class="val">${plan.summary.difficulty}</div><div class="lbl">코스 난이도</div></div>
+    <div class="result-stat"><div class="val">${gpxData.waypoints.length}개</div><div class="lbl">보급소</div></div>
+  `;
+
+  // 페이스 테이블
+  document.getElementById('pace-tbody').innerHTML = plan.segResults.map(r => `
+    <tr>
+      <td>구간${r.idx}</td>
+      <td>${r.startKm.toFixed(1)}~${r.endKm.toFixed(1)} km</td>
+      <td>↑${Math.round(r.gain)}m / ↓${Math.round(r.loss)}m</td>
+      <td><span class="badge ${r.type.badge}">${r.type.label}</span></td>
+      <td class="highlight">${formatPace(r.pace)}/km</td>
+      <td>${formatTime(r.segTime)}</td>
+      <td><strong>${formatTime(r.cumTime)}</strong></td>
+    </tr>
+  `).join('');
+
+  // 보급 계획
+  document.getElementById('supply-list').innerHTML = plan.supply.map(s => {
+    const gelHtml = s.gels && s.gels.length > 0
+      ? `<div class="gel-row">🍬 구간 중 젤 섭취: ${s.gels.map(g => `<span class="gel-chip">${g.km}km (${g.time})</span>`).join(' ')}</div>`
+      : '';
+    const itemsHtml = s.items.map(it =>
+      `<div class="supply-item"><span class="supply-icon">${it.icon}</span><span class="supply-label">${it.label}</span><span class="supply-detail">${it.detail}</span></div>`
+    ).join('');
+    return `
+    <li class="cp-block">
+      <div class="cp-header">
+        <span class="km">${s.km}</span>
+        <span class="cp-name">${s.name}</span>
+        <span class="cp-time">⏱ ${s.elapsed}</span>
+      </div>
+      ${gelHtml}
+      <div class="supply-items">${itemsHtml}</div>
+    </li>`;
+  }).join('');
+
+  // 전략
+  document.getElementById('strategy-text').textContent = plan.strategy;
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
