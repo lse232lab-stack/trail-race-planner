@@ -843,14 +843,38 @@ function estimateBasePace(experience, recTrail, rec5k, rec10k, recFull, weeklyEl
   const k10  = parseTimeToMin(rec10k);
   const k5   = parseTimeToMin(rec5k);
 
-  if (full && recFull.toLowerCase().includes('마라톤')) roadPacePerKm = full / 42.195;
-  else if (full) roadPacePerKm = full / 21.0975 * 1.08; // 하프
-  else if (k10)  roadPacePerKm = k10  / 10 * 1.15;
-  else if (k5)   roadPacePerKm = k5   / 5  * 1.25;
+  // 각 기록을 마라톤 등가 시간(분)으로 환산
+  let eqMarathonMin = null;
+  if (full && recFull.toLowerCase().includes('마라톤')) {
+    roadPacePerKm = full / 42.195;
+    eqMarathonMin = full;
+  } else if (full) {
+    // 하프 → 풀 환산 (리겔 공식 근사: t_full ≈ t_half × 2.11)
+    roadPacePerKm = full / 21.0975 * 1.08;
+    eqMarathonMin = full * 2.11;
+  } else if (k10) {
+    // 10K → 풀 환산 (리겔: t_full ≈ t_10k × 4.65)
+    roadPacePerKm = k10 / 10 * 1.15;
+    eqMarathonMin = k10 * 4.65;
+  } else if (k5) {
+    // 5K → 풀 환산 (리겔: t_full ≈ t_5k × 9.45)
+    roadPacePerKm = k5 / 5 * 1.25;
+    eqMarathonMin = k5 * 9.45;
+  }
 
-  // 트레일 보정계수 (도로 → 평지 트레일)
-  const trailFactor = { beginner:1.55, intermediate:1.35, advanced:1.22, elite:1.10 };
-  const factor = trailFactor[experience] || 1.35;
+  // 마라톤 등가기록 기준 트레일 보정계수
+  // (실데이터: 풀 2:26 마라토너가 제주오름 30K 2:29 → 보정계수 1.25 역산)
+  function trailFactorFromMarathon(eqMin) {
+    if (!eqMin)                 return 1.42; // 기록 없음 중간값
+    if (eqMin < 150)            return 1.25; // sub 2:30
+    if (eqMin < 180)            return 1.28; // 2:30~3:00
+    if (eqMin < 210)            return 1.32; // 3:00~3:30
+    if (eqMin < 240)            return 1.37; // 3:30~4:00
+    if (eqMin < 270)            return 1.42; // 4:00~4:30
+    if (eqMin < 300)            return 1.48; // 4:30~5:00
+    return 1.55;                             // 5:00+
+  }
+  const factor = trailFactorFromMarathon(eqMarathonMin);
 
   if (roadPacePerKm) return roadPacePerKm * factor;
   return defaults[experience] || 7.2;
