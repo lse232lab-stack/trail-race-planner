@@ -379,8 +379,8 @@
       <div class="form-section-title">최근 기록 <span class="form-hint">— 정확할수록 페이스 추천 향상</span></div>
       <div class="form-row2">
         <div class="form-group">
-          <label>트레일 레이스 기록</label>
-          <input type="text" id="rec-trail" placeholder="예) 30K 3:45:00" />
+          <label>트레일 레이스 기록 <span style="font-size:0.8em;opacity:0.65">(거리 · 획득고도 · 기록)</span></label>
+          <input type="text" id="rec-trail" placeholder="예) 30K 1500m 3:45:00" />
         </div>
         <div class="form-group">
           <label>풀마라톤 (42.195K)</label>
@@ -824,21 +824,34 @@ function estimateBasePace(experience, recTrail, rec5k, rec10k, recFull, recHalf,
   let roadPacePerKm = null;
 
   // 트레일 기록 있으면 최우선 사용
+  // 포맷: "30K 1500m 3:45:00" (거리 + 획득고도 + 기록) 또는 "30K 3:45:00" (하위호환)
   if (recTrail && recTrail.trim()) {
     const parts = recTrail.trim().split(/\s+/);
-    let trailDist = null, trailTime = null;
+    let trailDist = null, trailGain = null, trailTime = null;
     for (const p of parts) {
-      const km = parseFloat(p.replace(/k/i,''));
-      if (!isNaN(km) && km > 5) { trailDist = km; continue; }
+      const mVal = parseFloat(p.replace(/m$/i, ''));
+      if (!isNaN(mVal) && /m$/i.test(p) && mVal >= 100) { trailGain = mVal; continue; }
+      const kmVal = parseFloat(p.replace(/k(m)?$/i, ''));
+      if (!isNaN(kmVal) && kmVal > 5 && kmVal < 1000) { trailDist = kmVal; continue; }
       const t = parseTimeToMin(p);
       if (t) trailTime = t;
     }
-    if (trailTime && gpxData) {
-      const totalEffortKm = gpxData.segments.reduce((sum, seg) => {
-        const eff = seg.length + seg.gain / 100 - seg.loss / 200;
-        return sum + Math.max(eff, seg.length * 0.75);
-      }, 0);
-      if (totalEffortKm > 0) return trailTime / totalEffortKm;
+    if (trailTime) {
+      if (trailDist && trailGain !== null) {
+        // 획득고도 입력 시: 기준 코스 ITRA effort로 정확히 역산
+        // 하강 ≈ 획득고도로 가정 (대부분 트레일 코스는 net-neutral)
+        const refEffort = trailDist + trailGain / 100 - trailGain / 200;
+        const safeEffort = Math.max(refEffort, trailDist * 0.75);
+        return trailTime / safeEffort;
+      }
+      if (gpxData) {
+        // 고도 정보 없으면 현재 GPX effort로 폴백
+        const totalEffortKm = gpxData.segments.reduce((sum, seg) => {
+          const eff = seg.length + seg.gain / 100 - seg.loss / 200;
+          return sum + Math.max(eff, seg.length * 0.75);
+        }, 0);
+        if (totalEffortKm > 0) return trailTime / totalEffortKm;
+      }
       if (trailDist) return trailTime / trailDist;
     }
   }
