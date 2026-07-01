@@ -837,71 +837,65 @@ function calcSegmentTime(seg, flatPace) {
   return flatPace * safeEffort;              // 분
 }
 
-// 기록 기반 평지 트레일 페이스 추정 (min/km)
-function estimateBasePace(experience, recTrailDist, recTrailGain, recTrailTime, rec5k, rec10k, recFull, recHalf, weeklyElev, poles) {
+// 도로 기록 → 평지 트레일 페이스 (내부 공통 함수)
+function roadToTrailPace(rec5k, rec10k, recFull, recHalf, experience) {
   const defaults = { beginner:9.5, intermediate:7.2, advanced:5.8, elite:4.6 };
-  let roadPacePerKm = null;
-
-  // 트레일 기록 최우선
-  const trailTime = parseTimeToMin(recTrailTime);
-  if (trailTime) {
-    if (recTrailDist && recTrailGain !== null) {
-      // 거리 + 획득고도 모두 있을 때: 기준 코스 ITRA effort로 정확히 역산
-      // 하강 ≈ 획득고도 가정 (대부분 트레일 코스 net-neutral)
-      const refEffort = recTrailDist + recTrailGain / 100 - recTrailGain / 200;
-      return trailTime / Math.max(refEffort, recTrailDist * 0.75);
-    }
-    if (recTrailDist && gpxData) {
-      // 거리만 있을 때: 현재 GPX effort 비율로 스케일
-      const totalEffortKm = gpxData.segments.reduce((sum, seg) => {
-        const eff = seg.length + seg.gain / 100 - seg.loss / 200;
-        return sum + Math.max(eff, seg.length * 0.75);
-      }, 0);
-      const totalDist = gpxData.segments.reduce((s, seg) => s + seg.length, 0);
-      if (totalEffortKm > 0 && totalDist > 0) {
-        const effortRatio = totalEffortKm / totalDist;
-        return trailTime / (recTrailDist * effortRatio);
-      }
-    }
-    if (recTrailDist) return trailTime / recTrailDist;
-  }
-
-  // 도로 기록 파싱 (필드별 명확히 분리)
-  const full = parseTimeToMin(recFull);   // 풀마라톤 전용 필드
-  const half = parseTimeToMin(recHalf);   // 하프마라톤 전용 필드
+  const full = parseTimeToMin(recFull);
+  const half = parseTimeToMin(recHalf);
   const k10  = parseTimeToMin(rec10k);
   const k5   = parseTimeToMin(rec5k);
 
-  // 마라톤 등가 시간(분) 계산 — 우선순위: 풀 > 하프 > 10K > 5K
-  let eqMarathonMin = null;
-  if (full) {
-    roadPacePerKm = full / 42.195;
-    eqMarathonMin = full;
-  } else if (half) {
-    roadPacePerKm = half / 21.0975 * 1.08;
-    eqMarathonMin = half * 2.11;
-  } else if (k10) {
-    roadPacePerKm = k10 / 10 * 1.15;
-    eqMarathonMin = k10 * 4.65;
-  } else if (k5) {
-    roadPacePerKm = k5 / 5 * 1.25;
-    eqMarathonMin = k5 * 9.45;
-  }
+  let roadPace = null, eqMarathonMin = null;
+  if (full)      { roadPace = full / 42.195;          eqMarathonMin = full; }
+  else if (half) { roadPace = half / 21.0975 * 1.08;  eqMarathonMin = half * 2.11; }
+  else if (k10)  { roadPace = k10  / 10 * 1.15;       eqMarathonMin = k10  * 4.65; }
+  else if (k5)   { roadPace = k5   / 5  * 1.25;       eqMarathonMin = k5   * 9.45; }
 
-  // 마라톤 등가기록 기준 트레일 보정계수
   function trailFactorFromMarathon(eqMin) {
     if (!eqMin)      return 1.42;
-    if (eqMin < 150) return 1.25; // sub 2:30
-    if (eqMin < 180) return 1.28; // 2:30~3:00
-    if (eqMin < 210) return 1.32; // 3:00~3:30
-    if (eqMin < 240) return 1.37; // 3:30~4:00
-    if (eqMin < 270) return 1.42; // 4:00~4:30
-    if (eqMin < 300) return 1.48; // 4:30~5:00
+    if (eqMin < 150) return 1.25;
+    if (eqMin < 180) return 1.28;
+    if (eqMin < 210) return 1.32;
+    if (eqMin < 240) return 1.37;
+    if (eqMin < 270) return 1.42;
+    if (eqMin < 300) return 1.48;
     return 1.55;
   }
-  const factor = trailFactorFromMarathon(eqMarathonMin);
+  if (roadPace) return roadPace * trailFactorFromMarathon(eqMarathonMin);
+  return defaults[experience] || 7.2;
+}
 
-  if (roadPacePerKm) return roadPacePerKm * factor;
+// 기록 기반 평지 트레일 페이스 추정 (min/km)
+function estimateBasePace(experience, recTrailDist, recTrailGain, recTrailTime, rec5k, rec10k, recFull, recHalf, weeklyElev, poles) {
+  const trailTime = parseTimeToMin(recTrailTime);
+  const hasRoad   = !!(recFull || recHalf || rec10k || rec5k);
+
+  // 트레일 기록 파생 페이스
+  let trailPace = null;
+  if (trailTime) {
+    if (recTrailDist && recTrailGain != null) {
+      const refEffort = recTrailDist + recTrailGain / 100 - recTrailGain / 200;
+      trailPace = trailTime / Math.max(refEffort, recTrailDist * 0.75);
+    } else if (recTrailDist && gpxData) {
+      const totalEffort = gpxData.segments.reduce((s, seg) =>
+        s + Math.max(seg.length + seg.gain/100 - seg.loss/200, seg.length*0.75), 0);
+      const totalDist = gpxData.segments.reduce((s, seg) => s + seg.length, 0);
+      if (totalEffort > 0 && totalDist > 0)
+        trailPace = trailTime / (recTrailDist * (totalEffort / totalDist));
+    } else if (recTrailDist) {
+      trailPace = trailTime / recTrailDist;
+    }
+  }
+
+  // 도로 기록 파생 페이스
+  const roadPace = hasRoad ? roadToTrailPace(rec5k, rec10k, recFull, recHalf, experience) : null;
+
+  // 블렌딩: 둘 다 있으면 트레일 70% + 도로 30%
+  // → 도로 기록이 바뀌면 결과도 바뀜, 트레일 기록이 주도권 유지
+  if (trailPace && roadPace) return trailPace * 0.7 + roadPace * 0.3;
+  if (trailPace)             return trailPace;
+  if (roadPace)              return roadPace;
+  const defaults = { beginner:9.5, intermediate:7.2, advanced:5.8, elite:4.6 };
   return defaults[experience] || 7.2;
 }
 
